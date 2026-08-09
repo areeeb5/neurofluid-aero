@@ -3,3 +3,6 @@ __pycache__/
 .venv/
 venv/
 .claude/settings.local.json
+
+# Third-party binaries (XFOIL etc.) - not ours, don't belong in repo history
+tools/

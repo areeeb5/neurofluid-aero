@@ -74,10 +74,81 @@ geometry stats.
 - This keeps most random draws near realistic airfoil shapes; the
   validity filter above catches the remainder.
 
-## Phase 1, later steps (XFOIL, ANSYS, grid encoding)
-Not yet defined — to be added here when those steps are implemented. Per
-`CLAUDE.md`, all three data tiers (XFOIL / SU2 / ANSYS) must land on the
-SAME 64x64 grid definition (SDF, inside/outside mask, x, y, angle of
+## Phase 1, Step 3 — XFOIL install + validation
+
+### Install
+XFOIL 6.99 (Mark Drela / Harold Youngren, MIT), downloaded from
+<https://web.mit.edu/drela/Public/web/xfoil/> as `XFOIL6.99.zip`
+(3,813,300 bytes, SHA-256
+`E13E8FE5CC38D8AC2626E9D3B17643BDCFAA63791619F042AFDAA7CD103BCB08`).
+Extracted to `tools/xfoil/` — **`tools/` is gitignored**; it's a
+third-party binary and does not belong in repo history. The single zip
+contains all three executables (`xfoil.exe`, `pplot.exe`, `pxplot.exe`)
+plus `Xfoil699src.zip`; the separately-listed `Pplot.zip`/`Pxplot.zip` on
+the download page are NOT needed.
+
+### How XFOIL is driven (the mechanism Step 4's batch runner uses)
+XFOIL is a text-menu program that reads commands from **stdin**, one
+command per line, so it's fully scriptable by feeding it a command file.
+Blank lines mean "go up one menu level".
+
+Reliability notes learned here, which Step 4 must follow:
+- Redirect stdin/stdout to **files** (e.g. PowerShell `Start-Process
+  -RedirectStandardInput/-RedirectStandardOutput`). Piping XFOIL's stdout
+  into another process (`xfoil.exe < cmds.txt | head`) **hangs**.
+- Start every script with `PLOP` / `G` / blank line to toggle graphics
+  OFF, or XFOIL will try to open plot windows during a headless run.
+- Run with the working directory set to the output folder and use short
+  relative filenames; XFOIL has a limited filename buffer.
+- Always terminate the command file with `QUIT`, and use a wall-clock
+  timeout — a malformed script leaves XFOIL blocked on a prompt forever.
+- `MRCHDU: Convergence failed ...` in the log is a benign *inner*
+  boundary-layer iteration warning, NOT a failed point. The real check is
+  that a point reached the polar: count `Point added to stored polar`
+  lines, and treat `VISCAL` failures as genuine non-convergence.
+
+### Validation case (`data_generation/xfoil_validation/`)
+Per the "validate against a known published case first" convention, XFOIL
+was checked against **NACA 0012** (generated natively via `NACA 0012`, no
+coordinate file) at **Re = 1e6, M = 0.15, Ncrit = 9 (default), free
+transition**, α from −4° to +10° in 1° steps. All 15 points converged.
+
+| file | contents |
+|---|---|
+| `run_polar.inp`, `run_cp.inp` | exact XFOIL command scripts used (the reproducible recipe) |
+| `run_polar.log`, `run_cp.log` | full solver output, kept as convergence evidence |
+| `naca0012_polar.txt` | `PACC` polar: `alpha CL CD CDp CM Top_Xtr Bot_Xtr` (12 header lines) |
+| `cp_alpha0.txt`, `cp_alpha4.txt` | `CPWR` surface Cp: `x y Cp` (3 header lines), Selig node order (TE → LE → TE) |
+| `naca0012_validation.png` | Cp at 0°/4° + lift curve |
+
+`Top_Xtr` / `Bot_Xtr` are the free-transition x/c locations on the upper
+and lower surface — these are the transition columns `CLAUDE.md` wants
+retained for the laminar-turbulent stretch goal.
+
+### Validation checks (`data_generation/validate_xfoil.py`)
+NACA 0012 is symmetric, so correctness is checkable a priori. The script
+re-runs these and exits nonzero on failure:
+
+| check | tolerance | result |
+|---|---|---|
+| `CL(α=0) == 0` | 1e-4 | 0.000000 |
+| `CM(α=0) == 0` | 1e-3 | −0.000000 |
+| Cp upper == Cp lower at α=0 | 5e-3 | max diff 3.97e-4 |
+| `CL(−α) == −CL(α)` | 5e-4 | 0.0 |
+| `CD(−α) == CD(α)` | 5e-4 | 0.0 |
+| `Top_Xtr(α) == Bot_Xtr(−α)` | 1e-3 | 2.0e-4 |
+| lift-curve slope ≈ 2π/rad (0.1097/deg) | ±0.01 | 0.1083 /deg |
+
+Rerun with:
+```
+python data_generation/validate_xfoil.py
+```
+
+## Phase 1, later steps (batch XFOIL, ANSYS, grid encoding)
+Step 4 (batch XFOIL over the 500 CST airfoils) and the ANSYS + grid
+encoding steps are not yet defined here — to be added when implemented.
+Per `CLAUDE.md`, all three data tiers (XFOIL / SU2 / ANSYS) must land on
+the SAME 64x64 grid definition (SDF, inside/outside mask, x, y, angle of
 attack, Reynolds number channels) and the same non-dimensionalization;
 that grid spec belongs in this file once it exists, not redefined ad hoc
 in any one script.

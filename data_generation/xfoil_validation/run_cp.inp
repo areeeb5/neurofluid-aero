@@ -1,0 +1,14 @@
+PLOP
+G
+
+NACA 0012
+OPER
+VISC 1000000
+MACH 0.15
+ITER 200
+ALFA 0.0
+CPWR cp_alpha0.txt
+ALFA 4.0
+CPWR cp_alpha4.txt
+
+QUIT
