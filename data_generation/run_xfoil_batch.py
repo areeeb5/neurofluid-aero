@@ -42,6 +42,9 @@ N_PANEL_NODES = 200       # PPAR N -> fixed panel count for every airfoil,
                           # so Cp arrays are a consistent shape (and match
                           # CLAUDE.md's ~200 surface points for Head A)
 
+# XFOIL is single-threaded and CPU-bound; leave two cores for the OS.
+DEFAULT_WORKERS = max(1, (os.cpu_count() or 4) - 2)
+
 
 # ---------------------------------------------------------------------------
 # XFOIL driving
@@ -182,6 +185,30 @@ def load_done(status_path: str, n_alphas: int):
     return {a for a, c in counts.items() if c >= n_alphas}
 
 
+def aggregate_polars(cp_dir: str, out_csv: str) -> int:
+    """Rebuild the combined polar table from the per-airfoil .npz files.
+
+    Built from the .npz files rather than appended during the run, so a
+    resumed run cannot duplicate rows.
+    """
+    cols = ["CL", "CD", "CDp", "CM", "Top_Xtr", "Bot_Xtr"]
+    n = 0
+    with open(out_csv, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["airfoil_id", "baseline", "alpha"] + cols)
+        for path in sorted(os.listdir(cp_dir)):
+            if not path.endswith(".npz"):
+                continue
+            aid = path[:-4]
+            d = np.load(os.path.join(cp_dir, path), allow_pickle=False)
+            baseline = str(d["baseline"]) if "baseline" in d else ""
+            for i, a in enumerate(d["alpha"]):
+                w.writerow([aid, baseline, f"{a:g}"] +
+                           [f"{float(d[c][i]):.6g}" for c in cols])
+                n += 1
+    return n
+
+
 def main() -> int:
     here = os.path.dirname(os.path.abspath(__file__))
     p = argparse.ArgumentParser(description=__doc__)
@@ -191,8 +218,14 @@ def main() -> int:
     p.add_argument("--out_dir", default=os.path.join(here, "xfoil_data"))
     p.add_argument("--pilot", type=int, default=0,
                    help="if >0, run this many randomly sampled airfoils")
-    p.add_argument("--workers", type=int, default=6)
-    p.add_argument("--timeout", type=float, default=90.0, help="per-airfoil seconds")
+    p.add_argument("--workers", type=int, default=DEFAULT_WORKERS,
+                   help="parallel XFOIL processes (default: CPU count - 2)")
+    p.add_argument("--timeout", type=float, default=240.0,
+                   help="seconds for one airfoil's full sweep. Sized from "
+                        "measured per-ANGLE timing: slowest single angle "
+                        "observed was 3.75s, so a sweep where every angle is "
+                        "that slow is ~56s; 240s is ~4.3x margin on that and "
+                        "19x the slowest sweep actually observed.")
     p.add_argument("--alpha_min", type=float, default=-4.0)
     p.add_argument("--alpha_max", type=float, default=10.0)
     p.add_argument("--alpha_step", type=float, default=1.0)
@@ -242,7 +275,7 @@ def main() -> int:
     status_f = open(status_path, "a", newline="")
     writer = csv.writer(status_f)
     if new_file:
-        writer.writerow(["airfoil_id", "alpha", "status"])
+        writer.writerow(["airfoil_id", "baseline", "alpha", "status"])
         status_f.flush()
 
     lock = threading.Lock()
@@ -261,6 +294,7 @@ def main() -> int:
         for fut in as_completed(futures):
             rec = futures[fut]
             aid = rec["airfoil_id"]
+            baseline = rec.get("baseline", "")
             try:
                 statuses, record, elapsed = fut.result()
             except Exception as e:  # never lose a case silently
@@ -270,9 +304,10 @@ def main() -> int:
 
             with lock:
                 if record is not None:
+                    record["baseline"] = baseline
                     np.savez_compressed(os.path.join(cp_dir, f"{aid}.npz"), **record)
                 for s in statuses:
-                    writer.writerow([s[0], f"{s[1]:g}", s[2]])
+                    writer.writerow([s[0], baseline, f"{s[1]:g}", s[2]])
                     counters[s[2]] += 1
                 status_f.flush()
                 times.append(elapsed)
@@ -299,7 +334,12 @@ def main() -> int:
         print(f"  per-case (airfoil x alpha): mean "
               f"{t.mean()/len(alphas):.3f}s")
 
-    shutil.rmtree(work_root, ignore_errors=True)
+    polars_csv = os.path.join(args.out_dir, "polars.csv")
+    n_rows = aggregate_polars(cp_dir, polars_csv)
+    print(f"  aggregated {n_rows} converged points -> {polars_csv}")
+
+    if not args.keep_work:
+        shutil.rmtree(work_root, ignore_errors=True)
     return 0
 
 

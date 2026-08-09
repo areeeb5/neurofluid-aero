@@ -245,9 +245,115 @@ Rerun with:
 python data_generation/validate_xfoil.py
 ```
 
-## Phase 1, later steps (batch XFOIL, ANSYS, grid encoding)
-Step 4 (batch XFOIL over the 500 CST airfoils) and the ANSYS + grid
-encoding steps are not yet defined here — to be added when implemented.
+## Phase 1, Step 4 — batch XFOIL over all 500 airfoils
+Produced by [`data_generation/run_xfoil_batch.py`](data_generation/run_xfoil_batch.py),
+reported by [`data_generation/report_xfoil_batch.py`](data_generation/report_xfoil_batch.py).
+
+### Run configuration
+500 airfoils × 15 angles of attack (−4° to +10°, 1° steps) = 7,500 cases,
+at **Re = 1e6, M = 0.15, Ncrit = 9 (default), free transition** — the same
+flow conditions the Step 3 NACA 0012 validation used.
+
+`PPAR N 200` fixes the panel count at **200 nodes for every airfoil**, so
+Cp arrays are a consistent shape across the dataset and match CLAUDE.md's
+"~200 surface points" for Head A. The x/y node positions are identical
+across all angles of one airfoil (verified: deviation exactly 0.0), so
+they are stored once per airfoil rather than per case.
+
+### Execution model
+One XFOIL process handles one airfoil's **entire** angle sweep: the
+boundary layer marches from the previous angle, which is both faster and
+better-converging than restarting each angle. Consequences:
+
+- The wall-clock timeout is therefore **per airfoil sweep**, not per
+  angle. It is sized from measured per-*angle* timing: median 0.123 s,
+  p99 3.20 s, slowest single angle observed **3.75 s**. A pathological
+  sweep with every angle that slow is ~56 s, so the default **240 s** is
+  ~4.3× margin on that and ~19× the slowest sweep actually observed.
+- Parallelism is across airfoils, default `cpu_count - 2` workers, each
+  in its **own working directory** (`_work/<airfoil_id>/`), so concurrent
+  XFOIL processes cannot collide over scratch filenames.
+
+Follows the Step 3 reliability rules: stdin/stdout redirected to real
+files (never pipes), every script starts `PLOP` / `G` / blank, and
+convergence truth is whether a point reached the stored polar — *not* the
+absence of `MRCHDU` warnings.
+
+### `data_generation/xfoil_data/status.csv`
+The complete ledger — one row per **(airfoil, angle)** pair, 7,500 rows.
+Nothing is ever silently dropped. Also the resume ledger: on startup any
+airfoil with a full set of recorded angles is skipped.
+
+| column | meaning |
+|---|---|
+| `airfoil_id` | e.g. `airfoil_0001` |
+| `baseline` | real baseline family this airfoil came from |
+| `alpha` | angle of attack, degrees |
+| `status` | `converged`, `failed`, or `timed_out` |
+
+### `data_generation/xfoil_data/polars.csv`
+Aggregated aerodynamic coefficients, one row per **converged** case.
+Rebuilt from the `.npz` files at the end of every run rather than
+appended during it, so a resumed run cannot duplicate rows.
+
+Columns: `airfoil_id, baseline, alpha, CL, CD, CDp, CM, Top_Xtr, Bot_Xtr`
+
+`Top_Xtr` / `Bot_Xtr` are free-transition x/c locations on the upper and
+lower surface — the transition columns CLAUDE.md wants kept for the
+laminar-turbulent stretch goal.
+
+### `data_generation/xfoil_data/cp/<airfoil_id>.npz`
+One compressed archive per airfoil, holding only its converged angles.
+
+| key | shape | meaning |
+|---|---|---|
+| `alpha` | (n_conv,) | converged angles, degrees |
+| `x`, `y` | (200,) | panel node coordinates, shared by all angles |
+| `cp` | (n_conv, 200) | surface pressure coefficient |
+| `CL`, `CD`, `CDp`, `CM`, `Top_Xtr`, `Bot_Xtr` | (n_conv,) | per-angle coefficients |
+| `baseline` | scalar string | real baseline family |
+
+Node order is Selig (TE → LE → TE), matching the `.dat` files and the
+Step 3 `CPWR` output.
+
+### Results of the full run
+7,500 cases in **9.3 min** on 6 workers: **94.33% converged**, 5.43%
+failed, 0.24% timed out. Output is 10.8 MB. Full report in
+[`data_generation/xfoil_batch_report/`](data_generation/xfoil_batch_report/).
+
+A few percent of scattered non-convergence is **normal XFOIL behaviour,
+not a defect to chase**. But the per-baseline breakdown — which the
+20-airfoil pilot was far too small to reveal — shows the failures are
+*not* uniformly distributed:
+
+| baseline | converged | note |
+|---|---|---|
+| naca23012 … naca0018 (12 families) | 95.1 – 99.0% | sparse, scattered |
+| goe387 | 89.5% | thin + cambered |
+| naca6409 | 88.5% | cluster near α ≈ 2° |
+| **naca0006** | **72.5%** | the only family with timeouts |
+
+**naca0006 is a physics result, not a bug.** Its failures are clean
+through α = 4° and then climb monotonically — 6, 10, 15, 23, 29, 30
+failures at α = 5…10°, i.e. every variant fails at α = 10°. A 6%-thick
+section has a very small leading-edge radius and separates abruptly from
+the LE at Re = 1e6 with no reattachment, so there is no steady attached
+solution for XFOIL to converge to. Real NACA 0006 stalls around 8–9°.
+All 18 timeouts are naca0006 variants grinding at those post-stall
+angles.
+
+**Consequence for training:** high-α coverage is systematically thinner
+for thin sections. This is a property of the data, not an error, but any
+model evaluation should not assume uniform α coverage across baselines.
+
+One airfoil (`airfoil_0192`, a naca6409 variant) failed at all 15 angles
+and therefore has **no `.npz` file**. Its 15 failures are still recorded
+explicitly in `status.csv`; consumers must not assume every `airfoil_id`
+in the index has a corresponding Cp archive.
+
+## Phase 1, later steps (ANSYS, grid encoding)
+The ANSYS + grid encoding steps are not yet defined here — to be added
+when implemented.
 Per `CLAUDE.md`, all three data tiers (XFOIL / SU2 / ANSYS) must land on
 the SAME 64x64 grid definition (SDF, inside/outside mask, x, y, angle of
 attack, Reynolds number channels) and the same non-dimensionalization;
