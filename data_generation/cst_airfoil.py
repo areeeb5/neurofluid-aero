@@ -68,6 +68,29 @@ def generate_airfoil_coordinates(upper_coeffs, lower_coeffs, n_points: int = 100
     return x, y_upper, y_lower, coords
 
 
+def coordinates_from_cst(upper_coeffs, lower_coeffs, te_upper: float,
+                          te_lower: float, n_points: int = 100):
+    """Like generate_airfoil_coordinates, but with an independent trailing-edge
+    offset per surface.
+
+    Real airfoils fitted from coordinate files rarely have a perfectly
+    symmetric TE gap, so upper and lower each carry their own offset
+    instead of sharing +/- half of one thickness.
+
+    Returns (x, y_upper, y_lower, coords) exactly as
+    generate_airfoil_coordinates does.
+    """
+    x = cosine_spacing(n_points)
+    y_upper = cst_surface(x, upper_coeffs, te_upper)
+    y_lower = cst_surface(x, lower_coeffs, te_lower)
+
+    upper_pts = np.column_stack([x[::-1], y_upper[::-1]])  # TE -> LE
+    lower_pts = np.column_stack([x[1:], y_lower[1:]])      # LE (excl, shared) -> TE
+    coords = np.vstack([upper_pts, lower_pts])
+
+    return x, y_upper, y_lower, coords
+
+
 def thickness_and_camber(x: np.ndarray, y_upper: np.ndarray, y_lower: np.ndarray):
     """Max thickness and signed max camber, both as chord fractions.
 
