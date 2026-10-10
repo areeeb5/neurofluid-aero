@@ -6,3 +6,7 @@ venv/
 
 # Third-party binaries (XFOIL etc.) - not ours, don't belong in repo history
 tools/
+
+# Per-airfoil Cp archives (~10 MB binary, regenerable in ~9 min from code).
+# status.csv and polars.csv are committed instead.
+data_generation/xfoil_data/cp/
