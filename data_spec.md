@@ -426,5 +426,69 @@ channel still carries the sub-cell geometry, and Head A samples the SDF-aligned
 latent field. Expect thin-section accuracy to be the weak spot. See
 `grids/grid_check.png`.
 
+## Phase 1, XFOIL data QA (`data_generation/qa_xfoil.py`)
+Converged only means XFOIL reached a stored polar point, not that the
+result is physical, so every converged case is checked. Flags are advisory:
+nothing is deleted or changed. Output: `xfoil_data/qa_flags.csv` (one row per
+flag: `airfoil_id, baseline, alpha, severity, check, value`) and
+`xfoil_batch_report/qa_summary.md`.
+
+HARD checks (impossible or corrupt): non-finite values, `CD <= 0` or
+`CD > 0.5`, `|CL| > 3.5`, transition location outside [0, 1], `Cp > 1.02` or
+`Cp < −30`, `CD` below pressure drag `CDp`, and a Cp-vs-CL mismatch above 0.15.
+REVIEW checks (unusual, look at it): CL second difference above 0.30, CD
+changing by more than 2.5× between 1° steps, negative lift slope below 8°.
+
+**Result: 0 HARD and 0 REVIEW flags over all 7,075 converged cases.** The CL
+obtained by integrating each stored Cp curve equals the polar's CL to 1e-4.
+That is a file-integrity check (the Cp archives are complete, correctly
+ordered and matched to the right angle), *not* independent physics
+validation: XFOIL computes its CL from the same Cp.
+
+The checks themselves are tested: a real case must stay clean, and six
+injected faults (negative CD, NaN, transition at 1.5, Cp spike, CL shifted by
+0.4, CD below CDp) must each trip their check. The Cp-integration formula is
+verified against the NACA 0012 validation case, and a reversed traversal must
+fail.
+
+## Phase 1, train / val / test split (`data_generation/make_splits.py`)
+Output `data_generation/splits.csv`: `airfoil_id, baseline, split,
+n_converged`. Seed 42, fully reproducible.
+
+- The unit of splitting is the **airfoil**, never the (airfoil, α) case.
+- Within each of 13 baseline families: 80/10/10 at random into `train`,
+  `val`, `test`. Variants of one baseline are only about 10% apart, so these
+  splits measure interpolation within known families.
+- Two **whole families held out**, chosen by the seed: `e387` and
+  `naca6409`. All their airfoils are `test_unseen_family`. This is the honest
+  generalisation test.
+
+| split | airfoils | converged cases |
+|---|---|---|
+| train | 356 | 5,063 |
+| val | 39 | 550 |
+| test | 39 | 543 |
+| test_unseen_family | 66 | 919 |
+
+`airfoil_0192` (in `naca6409`, so in the unseen split) has no converged case.
+Checks (all pass): each airfoil exactly once, no held-out family in
+train/val/test, every other family in all three, seed reproducible, and a
+deliberately leaked airfoil is detected.
+
+## Phase 1, classical-ML baselines (`data_generation/baselines_classical.py`)
+Predict CL, CD, CM from the 10 CST coefficients + 2 trailing-edge offsets +
+α. Trained on `train` only, no tuning. Full tables in
+`baselines_results/classical_baselines.md`.
+
+| R² | CL | CD | CM |
+|---|---|---|---|
+| random forest, `test` | 0.998 | 0.976 | 0.993 |
+| random forest, `test_unseen_family` | 0.965 | 0.939 | 0.618 |
+| gradient boosting, `test_unseen_family` | 0.985 | 0.941 | 0.938 |
+
+CD is the hardest target in-family, as Moin et al. 2021 found. The dataset is
+15 tight clusters, so in-family scores are near-interpolation and very high;
+the `test_unseen_family` split is the meaningful bar for the neural operator.
+
 ## Phase 1, later steps (ANSYS)
 The ANSYS tier is not yet defined here. Its export must use the grid above.
