@@ -515,26 +515,34 @@ How the XFOIL data is turned into training samples
   `data_stage1.py`); it reproduces XFOIL's CL to 6.6e-5 on real cases, so CL
   can be reported from the model's Cp output.
 
-**Stage 1 result, seed 42** (details in `overnight/stage1_results.md`):
+**Stage 1 result: mean over 3 seeds (42, 43, 44)**, spread in
+`overnight/stage1_seed_spread.md`, per-seed detail in
+`overnight/stage1_results*.md`. Seed 42 was the best of the three.
 
 | split | Cp RMSE | Cp relative L2 | CL MAE (from Cp) |
 |---|---|---|---|
-| val | 0.0329 | 3.7% | 0.0110 |
-| test | 0.0313 | 3.4% | 0.0093 |
-| test_unseen_family | 0.1326 | 17.5% | 0.0207 |
+| val | 0.0360 ± 0.0028 | 4.1% | 0.0116 ± 0.0006 |
+| test | 0.0348 ± 0.0031 | 3.8% | 0.0099 ± 0.0007 |
+| test_unseen_family | 0.1461 ± 0.0145 | 18.6% | 0.0260 ± 0.0066 |
 
-For reference, predicting the training-mean Cp curve gives a Cp RMSE of about
-0.66. On CL the random-forest baseline's MAE is 0.0172 (`test`) and 0.0727
-(`test_unseen_family`; gradient boosting 0.0437). By case, the largest Cp
+(± is the standard deviation over the three seeds.) For reference, predicting
+the training-mean Cp curve gives a Cp RMSE of about 0.66. On CL the
+random-forest baseline's MAE is 0.0172 (`test`) and 0.0727
+(`test_unseen_family`; gradient boosting 0.0437), so the Stage 1 network is
+about 1.7× better in-family and 1.7× to 2.8× better on unseen families, and
+even its worst seed (0.0334) beats gradient boosting on unseen families. It
+was trained on Cp, not on CL. By case, the largest Cp
 errors are the amplitude of the leading-edge suction spike at high α. By
 family (`overnight/stage1_error_by_family.md`): the two unseen families have
 17 to 18% error against 2 to 5% in-family, and the thin NACA 0006 family has
 about twice the error of the others even on training airfoils, consistent with
 (not proof of) coarse resolution of thin sections on this grid. A diagnostic
 shows the network can memorise even the sharpest spike in the data, so the
-spike error on unseen cases is not a capacity limit. The run hit its 400-epoch
-cap with validation still improving slowly, so it is not fully converged. One
-seed here; see `overnight/MORNING_REPORT.md` for the multi-seed spread.
+spike error on unseen cases is not a capacity limit. Seed 42 hit its 400-epoch
+cap with validation still improving slowly; seeds 43 and 44 early-stopped at
+281 and 321 epochs. Seed-to-seed spread is about 10% of the error in-family and
+about 10% on unseen families, so single-run comparisons should not be read too
+finely.
 
 ## Phase 1, later steps (ANSYS)
 The ANSYS tier is not yet defined here. Its export must use the grid above

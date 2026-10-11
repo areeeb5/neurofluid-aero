@@ -104,8 +104,8 @@ trained. As of 2026-10-11 (after the overnight run on branch
   QA (0 flags), the 64x64 grid (domain x -0.25..1.25, y -0.75..0.75, defined in
   `data_spec.md`; ANSYS export must match), train/val/test split incl. two
   held-out families, classical-ML baselines, Stage 1 model (FNO trunk + Head A)
-  with the overfit-a-single-sample gate passed, and a first training run
-  (test Cp RMSE 0.031; held-out families 0.133). Results in `overnight/`.
+  with the overfit-a-single-sample gate passed, and training runs over 3 seeds
+  (mean test Cp RMSE 0.035; held-out families 0.146). Results in `overnight/`.
 - NOT DONE: the ANSYS tier (Fluent meshing is handled in a separate session,
   which has NOT yet been told the grid domain), Head B, physics loss, the
   core N_ANSYS-sweep experiment, real active selection (only a draft exists).

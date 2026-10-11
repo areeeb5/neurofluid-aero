@@ -1,0 +1,5 @@
+a3c99bf070ff241ca22d0c5c4da5f805e55e039ecf08d97c8c43d78839e88ed5  data_generation/airfoil_index.csv
+4eb7a7ae3c6af54787a62be14103e4e9e025035a63fa742c627530f1536798df  data_generation/xfoil_data/status.csv
+70df5b64b151aa121fdf6ec0f316d720e6805693f01fb1f88bbca6f7f2d18236  data_generation/xfoil_data/polars.csv
+670603b709b7ae239fee457a840cc8e2cfa86c247f1ab9783fb99503bbd31f3d  data_generation/airfoils/*.dat (aggregate of 500)
+f0f3b64385766082b0addf467886e1b64d4fa13514ed448f4a8bcdb877aa424a  data_generation/xfoil_data/cp/*.npz (aggregate of 499)
