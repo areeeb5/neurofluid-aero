@@ -1,0 +1,14 @@
+{
+  "case": 568,
+  "airfoil": "airfoil_0048",
+  "alpha": 3.0,
+  "steps": 1500,
+  "lr": 0.001,
+  "seed": 42,
+  "gate_rel_l2": 0.02,
+  "start_rel_l2": 1.07303786277771,
+  "final_rel_l2": 0.004631441552191973,
+  "first_step_below_gate": 372,
+  "control_final_rel_l2": 1.07303786277771,
+  "gate_passed": true
+}
