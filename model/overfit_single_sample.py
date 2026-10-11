@@ -56,13 +56,21 @@ def main() -> int:
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--steps", type=int, default=1500)
     p.add_argument("--lr", type=float, default=1e-3)
+    p.add_argument("--hardest", action="store_true",
+                   help="diagnostic: use the train case with the sharpest suction peak "
+                        "(most negative Cp) instead of a random one. Not the gate: "
+                        "writes overfit_hardest.* and always exits 0")
     args = p.parse_args()
+    sfx = "_hardest" if args.hardest else ""
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     data = Stage1Data(device)
     rng = np.random.default_rng(args.seed)
     tr = data.indices("train").cpu().numpy()
-    case = int(rng.choice(tr))
+    if args.hardest:
+        case = int(tr[int(np.argmin(data.case_cp[torch.as_tensor(tr, device=device)].min(dim=1).values.cpu().numpy()))])
+    else:
+        case = int(rng.choice(tr))
     ai = int(data.case_ai[case])
     print(f"device {device}; case {case}: {data.ids[ai]} ({data.baseline[data.ids[ai]]}), "
           f"alpha {float(data.case_alpha[case]):g} deg, "
@@ -88,7 +96,8 @@ def main() -> int:
            "start_rel_l2": hist[0], "final_rel_l2": final, "first_step_below_gate": first_below,
            "control_final_rel_l2": hist0[-1], "gate_passed": bool(ok)}
     os.makedirs(os.path.join(ROOT, "overnight"), exist_ok=True)
-    with open(os.path.join(ROOT, "overnight", "overfit_gate.json"), "w") as f:
+    with open(os.path.join(ROOT, "overnight", f"overfit_gate{sfx}.json" if not args.hardest
+                           else "overfit_hardest.json"), "w") as f:
         json.dump(out, f, indent=2)
 
     fig, ax = plt.subplots(1, 2, figsize=(11, 4))
@@ -101,7 +110,11 @@ def main() -> int:
     ax[1].legend(); ax[1].grid(alpha=0.3)
     fig.suptitle(f"Overfit-a-single-sample gate: {data.ids[ai]}, alpha {float(data.case_alpha[case]):g} deg")
     fig.tight_layout()
-    fig.savefig(os.path.join(ROOT, "overnight", "overfit_gate.png"), dpi=130)
+    fig.savefig(os.path.join(ROOT, "overnight", "overfit_hardest.png" if args.hardest
+                             else "overfit_gate.png"), dpi=130)
+    if args.hardest:
+        print(f"DIAGNOSTIC (not the gate): hardest case final rel L2 {final:.4f}")
+        return 0
     print("GATE " + ("PASSED" if ok else "FAILED"))
     return 0 if ok else 1
 

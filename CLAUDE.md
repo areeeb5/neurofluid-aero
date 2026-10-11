@@ -96,5 +96,32 @@ definition - defined once in `data_spec.md` and never redefined ad hoc.
   ablations, write-up.
 
 ## Current status
-Phase 1 (data generation) in progress. CST airfoil geometry generation
-(Step 1) is the current task - see the task prompt for exact spec.
+Phase 1 (data generation) done except the ANSYS tier; Stage 1 prototype
+trained. As of 2026-10-11 (after the overnight run on branch
+`overnight-2026-10-11`, local, not pushed):
+- DONE: airfoil geometry (500 airfoils from 15 real UIUC baselines), XFOIL
+  install + validation, batch XFOIL (7,500 cases, 94.33% converged), XFOIL data
+  QA (0 flags), the 64x64 grid (domain x -0.25..1.25, y -0.75..0.75, defined in
+  `data_spec.md`; ANSYS export must match), train/val/test split incl. two
+  held-out families, classical-ML baselines, Stage 1 model (FNO trunk + Head A)
+  with the overfit-a-single-sample gate passed, and a first training run
+  (test Cp RMSE 0.031; held-out families 0.133). Results in `overnight/`.
+- NOT DONE: the ANSYS tier (Fluent meshing is handled in a separate session,
+  which has NOT yet been told the grid domain), Head B, physics loss, the
+  core N_ANSYS-sweep experiment, real active selection (only a draft exists).
+- Next: tell the ANSYS session the grid domain; one validated ANSYS case on that
+  grid; review `overnight/active_selection_draft.md`.
+- Live one-page status is in `STATUS.md`; the overnight log is `overnight/LOG.md`.
+
+## Model and effort
+I can't be switched automatically, so before each major step recommend in ONE line the model + effort for it:
+- Sonnet / medium: reruns, sweeps, report formatting, edits to existing scripts
+- Opus / medium: planning a study, new mesh or solver setup
+- Opus / high: validation logic, unexplained divergence, results that look wrong
+- Sonnet / low: simple questions, status checks
+I switch it in the model menu. Recommend only at step boundaries (every switch re-reads the whole chat).
+
+## STATUS.md (read by HQ)
+Keep `STATUS.md` in this folder. After each major step, OVERWRITE it (never append) with at most 15 lines:
+date/time, current state, last result (key numbers), next step, blocked/waiting on Areeb, recommended model/effort.
+Current state only, no history. Don't message HQ; HQ reads this file when Areeb asks.

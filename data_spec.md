@@ -423,8 +423,10 @@ column holds a median of 5 mask cells (range 2 to 8), and **34 airfoils (the
 6%-thick NACA 0006 family) have a thickest column of only 2 cells**. For
 those the mask is coarse and stops short of the thin trailing edge; the SDF
 channel still carries the sub-cell geometry, and Head A samples the SDF-aligned
-latent field. Expect thin-section accuracy to be the weak spot. See
-`grids/grid_check.png`.
+latent field. In the Stage 1 run the thinnest family does show about twice the
+error of the others even on training airfoils
+(`overnight/stage1_error_by_family.md`), which is consistent with this but not
+proof of it. See `grids/grid_check.png`.
 
 ## Phase 1, XFOIL data QA (`data_generation/qa_xfoil.py`)
 Converged only means XFOIL reached a stored polar point, not that the
@@ -490,5 +492,50 @@ CD is the hardest target in-family, as Moin et al. 2021 found. The dataset is
 15 tight clusters, so in-family scores are near-interpolation and very high;
 the `test_unseen_family` split is the meaningful bar for the neural operator.
 
+## Stage 1 (Head A) training data contract
+How the XFOIL data is turned into training samples
+(`model/data_stage1.py`). Model code and results live in `model/` and
+`overnight/`; only the data-facing rules are fixed here.
+
+- **A sample is one converged (airfoil, α) case** (7,075 of them). Failed and
+  timed-out cases are never trained on. `airfoil_0192` contributes nothing.
+- **Input:** the 6-channel 64×64 grid above, assembled on the fly from the
+  per-airfoil `sdf`/`mask` plus the case's α and Re = 1e6.
+- **Target:** Cp at the airfoil's **200 XFOIL panel nodes** (`cp` in the
+  `.npz`, Selig order TE → upper → LE → lower → TE).
+- **Surface points for Head A:** those same 200 node coordinates `(x, y)` in
+  chord units, per airfoil (they differ slightly between airfoils because
+  XFOIL repanels each one). Head A bilinearly samples the latent field there
+  with `grid_sample(align_corners=False, padding_mode='border')`, verified
+  against the numpy reference `grid_encoding.sample_field`.
+- **Splits:** `splits.csv`, by airfoil. Train on `train`; early-stop on
+  `val`; touch `test` and `test_unseen_family` once, at the end.
+- **CL from Cp:** CL is recovered from a Cp curve by integrating around the
+  closed outline (formula in `qa_xfoil.py`, torch version in
+  `data_stage1.py`); it reproduces XFOIL's CL to 6.6e-5 on real cases, so CL
+  can be reported from the model's Cp output.
+
+**Stage 1 result, seed 42** (details in `overnight/stage1_results.md`):
+
+| split | Cp RMSE | Cp relative L2 | CL MAE (from Cp) |
+|---|---|---|---|
+| val | 0.0329 | 3.7% | 0.0110 |
+| test | 0.0313 | 3.4% | 0.0093 |
+| test_unseen_family | 0.1326 | 17.5% | 0.0207 |
+
+For reference, predicting the training-mean Cp curve gives a Cp RMSE of about
+0.66. On CL the random-forest baseline's MAE is 0.0172 (`test`) and 0.0727
+(`test_unseen_family`; gradient boosting 0.0437). By case, the largest Cp
+errors are the amplitude of the leading-edge suction spike at high α. By
+family (`overnight/stage1_error_by_family.md`): the two unseen families have
+17 to 18% error against 2 to 5% in-family, and the thin NACA 0006 family has
+about twice the error of the others even on training airfoils, consistent with
+(not proof of) coarse resolution of thin sections on this grid. A diagnostic
+shows the network can memorise even the sharpest spike in the data, so the
+spike error on unseen cases is not a capacity limit. The run hit its 400-epoch
+cap with validation still improving slowly, so it is not fully converged. One
+seed here; see `overnight/MORNING_REPORT.md` for the multi-seed spread.
+
 ## Phase 1, later steps (ANSYS)
-The ANSYS tier is not yet defined here. Its export must use the grid above.
+The ANSYS tier is not yet defined here. Its export must use the grid above
+(x −0.25 to 1.25, y −0.75 to 0.75, 64×64 cell centres, `[iy, ix]` layout).
