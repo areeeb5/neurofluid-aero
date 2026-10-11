@@ -77,7 +77,10 @@ def main() -> int:
     p.add_argument("--width", type=int, default=32)
     p.add_argument("--patience", type=int, default=30, help="epochs without val improvement")
     p.add_argument("--time_cap_min", type=float, default=45.0)
+    p.add_argument("--tag", default="", help="suffix for every output file (e.g. s43), "
+                   "so extra-seed runs never overwrite the main run")
     args = p.parse_args()
+    sfx = f"_{args.tag}" if args.tag else ""
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -92,7 +95,7 @@ def main() -> int:
           f"train {len(tr)} val {len(va)} cases; seed {args.seed}", flush=True)
 
     os.makedirs(os.path.join(OUT, "checkpoints"), exist_ok=True)
-    ckpt = os.path.join(OUT, "checkpoints", "stage1_best.pt")
+    ckpt = os.path.join(OUT, "checkpoints", f"stage1_best{sfx}.pt")
     gen = torch.Generator(device="cpu").manual_seed(args.seed)
 
     log, best, best_ep, stale = [], float("inf"), -1, 0
@@ -135,7 +138,7 @@ def main() -> int:
     print(f"stopped after {len(log)} epochs, {minutes:.1f} min: {reason}; best val Cp RMSE {best:.4f} @ epoch {best_ep}",
           flush=True)
 
-    with open(os.path.join(OUT, "stage1_training_log.csv"), "w", newline="") as f:
+    with open(os.path.join(OUT, f"stage1_training_log{sfx}.csv"), "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(log[0].keys()))
         w.writeheader()
         w.writerows(log)
@@ -152,7 +155,7 @@ def main() -> int:
     summary = {"seed": args.seed, "epochs_run": len(log), "best_epoch": best_ep,
                "stop_reason": reason, "minutes": minutes,
                "params": fno.count_parameters(net), "results": results}
-    with open(os.path.join(OUT, "stage1_results.json"), "w") as f:
+    with open(os.path.join(OUT, f"stage1_results{sfx}.json"), "w") as f:
         json.dump(summary, f, indent=2)
 
     md = ["# Stage 1 results (Head A, Cp on XFOIL data)", "",
@@ -165,7 +168,7 @@ def main() -> int:
         md.append(f"| {s} | {r['n']} | {r['cp_rmse']:.4f} | {r['cp_rel_l2']:.4f} | "
                   f"{r['cl_rmse']:.4f} | {r['cl_r2']:.4f} | "
                   f"{r.get('cp_rmse_mean_curve_baseline', float('nan')):.4f} |")
-    open(os.path.join(OUT, "stage1_results.md"), "w").write("\n".join(md) + "\n")
+    open(os.path.join(OUT, f"stage1_results{sfx}.md"), "w").write("\n".join(md) + "\n")
     print("\n".join(md), flush=True)
 
     # ---- per-airfoil error (input for the active-selection draft) ----
@@ -187,7 +190,7 @@ def main() -> int:
                      "max_cp_rmse": float(rmse_case[m].max()),
                      "mean_abs_cl_err": float(clerr[m].mean())})
     rows.sort(key=lambda r: -r["mean_cp_rel_l2"])
-    with open(os.path.join(OUT, "stage1_per_airfoil_error.csv"), "w", newline="") as f:
+    with open(os.path.join(OUT, f"stage1_per_airfoil_error{sfx}.csv"), "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)
@@ -201,7 +204,7 @@ def main() -> int:
     ax[0].set_xlabel("epoch"); ax[0].set_ylabel("Cp RMSE"); ax[0].legend(); ax[0].grid(alpha=0.3)
     ax[1].semilogy(ep, [r["lr"] for r in log]); ax[1].set_xlabel("epoch"); ax[1].set_ylabel("learning rate")
     ax[1].grid(alpha=0.3)
-    fig.tight_layout(); fig.savefig(os.path.join(OUT, "stage1_curves.png"), dpi=130); plt.close(fig)
+    fig.tight_layout(); fig.savefig(os.path.join(OUT, f"stage1_curves{sfx}.png"), dpi=130); plt.close(fig)
 
     fig, axes = plt.subplots(2, 3, figsize=(15, 7))
     for row_i, s in enumerate(["test", "test_unseen_family"]):
@@ -220,7 +223,7 @@ def main() -> int:
                           f"RMSE {float(e[k]):.3f}", fontsize=9)
             if col == 0:
                 axx.legend(fontsize=8); axx.set_ylabel("Cp")
-    fig.tight_layout(); fig.savefig(os.path.join(OUT, "stage1_examples.png"), dpi=120); plt.close(fig)
+    fig.tight_layout(); fig.savefig(os.path.join(OUT, f"stage1_examples{sfx}.png"), dpi=120); plt.close(fig)
     print("done", flush=True)
     return 0
 

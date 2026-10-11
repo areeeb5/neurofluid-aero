@@ -1,0 +1,61 @@
+view,rank,airfoil_id,baseline,split,n_cases,mean_cp_rel_l2,worst_alpha,worst_case_rel_l2
+all airfoils,1,airfoil_0288,e387,test_unseen_family,15,0.2440119832754135,-3.0,0.3512701094150543
+all airfoils,2,airfoil_0177,naca6409,test_unseen_family,14,0.23046354949474335,-1.0,0.31157809495925903
+all airfoils,3,airfoil_0185,naca6409,test_unseen_family,13,0.221952423453331,-2.0,0.34371107816696167
+all airfoils,4,airfoil_0195,naca6409,test_unseen_family,13,0.21324709057807922,-1.0,0.2988939881324768
+all airfoils,5,airfoil_0297,e387,test_unseen_family,14,0.21106965839862823,-3.0,0.3482549786567688
+all airfoils,6,airfoil_0272,e387,test_unseen_family,14,0.19511005282402039,-3.0,0.29799532890319824
+all airfoils,7,airfoil_0319,s1223,val,14,0.09142623841762543,-2.0,0.13841474056243896
+all airfoils,8,airfoil_0315,s1223,test,15,0.07590533047914505,-4.0,0.10211843997240067
+all airfoils,9,airfoil_0024,naca0006,val,9,0.07421664148569107,1.0,0.10910038650035858
+all airfoils,10,airfoil_0016,naca0006,test,11,0.07370216399431229,-3.0,0.12759704887866974
+all airfoils,11,airfoil_0435,rae2822,test,14,0.07339353114366531,9.0,0.16340556740760803
+all airfoils,12,airfoil_0007,naca0006,train,8,0.0707249566912651,2.0,0.10632739216089249
+all airfoils,13,airfoil_0415,naca63-412,val,15,0.06541048735380173,-4.0,0.09348198771476746
+all airfoils,14,airfoil_0408,naca63-412,val,15,0.06455495208501816,-2.0,0.09208650141954422
+all airfoils,15,airfoil_0346,goe387,test,14,0.060994889587163925,-4.0,0.10346874594688416
+all airfoils,16,airfoil_0451,rae2822,test,12,0.055840011686086655,5.0,0.06315527856349945
+all airfoils,17,airfoil_0066,naca0012,val,13,0.05142519250512123,-4.0,0.06436844915151596
+all airfoils,18,airfoil_0055,naca0012,val,15,0.049809813499450684,4.0,0.06583112478256226
+all airfoils,19,airfoil_0462,rae2822,test,14,0.04878160357475281,-4.0,0.06542112678289413
+all airfoils,20,airfoil_0360,goe387,val,12,0.045469317585229874,-2.0,0.061525266617536545
+"held-out airfoils (val, test, unseen family)",1,airfoil_0288,e387,test_unseen_family,15,0.2440119832754135,-3.0,0.3512701094150543
+"held-out airfoils (val, test, unseen family)",2,airfoil_0177,naca6409,test_unseen_family,14,0.23046354949474335,-1.0,0.31157809495925903
+"held-out airfoils (val, test, unseen family)",3,airfoil_0185,naca6409,test_unseen_family,13,0.221952423453331,-2.0,0.34371107816696167
+"held-out airfoils (val, test, unseen family)",4,airfoil_0195,naca6409,test_unseen_family,13,0.21324709057807922,-1.0,0.2988939881324768
+"held-out airfoils (val, test, unseen family)",5,airfoil_0297,e387,test_unseen_family,14,0.21106965839862823,-3.0,0.3482549786567688
+"held-out airfoils (val, test, unseen family)",6,airfoil_0272,e387,test_unseen_family,14,0.19511005282402039,-3.0,0.29799532890319824
+"held-out airfoils (val, test, unseen family)",7,airfoil_0319,s1223,val,14,0.09142623841762543,-2.0,0.13841474056243896
+"held-out airfoils (val, test, unseen family)",8,airfoil_0315,s1223,test,15,0.07590533047914505,-4.0,0.10211843997240067
+"held-out airfoils (val, test, unseen family)",9,airfoil_0024,naca0006,val,9,0.07421664148569107,1.0,0.10910038650035858
+"held-out airfoils (val, test, unseen family)",10,airfoil_0016,naca0006,test,11,0.07370216399431229,-3.0,0.12759704887866974
+"held-out airfoils (val, test, unseen family)",11,airfoil_0435,rae2822,test,14,0.07339353114366531,9.0,0.16340556740760803
+"held-out airfoils (val, test, unseen family)",12,airfoil_0415,naca63-412,val,15,0.06541048735380173,-4.0,0.09348198771476746
+"held-out airfoils (val, test, unseen family)",13,airfoil_0408,naca63-412,val,15,0.06455495208501816,-2.0,0.09208650141954422
+"held-out airfoils (val, test, unseen family)",14,airfoil_0346,goe387,test,14,0.060994889587163925,-4.0,0.10346874594688416
+"held-out airfoils (val, test, unseen family)",15,airfoil_0451,rae2822,test,12,0.055840011686086655,5.0,0.06315527856349945
+"held-out airfoils (val, test, unseen family)",16,airfoil_0066,naca0012,val,13,0.05142519250512123,-4.0,0.06436844915151596
+"held-out airfoils (val, test, unseen family)",17,airfoil_0055,naca0012,val,15,0.049809813499450684,4.0,0.06583112478256226
+"held-out airfoils (val, test, unseen family)",18,airfoil_0462,rae2822,test,14,0.04878160357475281,-4.0,0.06542112678289413
+"held-out airfoils (val, test, unseen family)",19,airfoil_0026,naca0006,val,9,0.04588902369141579,3.0,0.05519629642367363
+"held-out airfoils (val, test, unseen family)",20,airfoil_0360,goe387,val,12,0.045469317585229874,-2.0,0.061525266617536545
+val + test airfoils only (families the model trained on),1,airfoil_0319,s1223,val,14,0.09142623841762543,-2.0,0.13841474056243896
+val + test airfoils only (families the model trained on),2,airfoil_0315,s1223,test,15,0.07590533047914505,-4.0,0.10211843997240067
+val + test airfoils only (families the model trained on),3,airfoil_0024,naca0006,val,9,0.07421664148569107,1.0,0.10910038650035858
+val + test airfoils only (families the model trained on),4,airfoil_0016,naca0006,test,11,0.07370216399431229,-3.0,0.12759704887866974
+val + test airfoils only (families the model trained on),5,airfoil_0435,rae2822,test,14,0.07339353114366531,9.0,0.16340556740760803
+val + test airfoils only (families the model trained on),6,airfoil_0415,naca63-412,val,15,0.06541048735380173,-4.0,0.09348198771476746
+val + test airfoils only (families the model trained on),7,airfoil_0408,naca63-412,val,15,0.06455495208501816,-2.0,0.09208650141954422
+val + test airfoils only (families the model trained on),8,airfoil_0346,goe387,test,14,0.060994889587163925,-4.0,0.10346874594688416
+val + test airfoils only (families the model trained on),9,airfoil_0451,rae2822,test,12,0.055840011686086655,5.0,0.06315527856349945
+val + test airfoils only (families the model trained on),10,airfoil_0066,naca0012,val,13,0.05142519250512123,-4.0,0.06436844915151596
+val + test airfoils only (families the model trained on),11,airfoil_0055,naca0012,val,15,0.049809813499450684,4.0,0.06583112478256226
+val + test airfoils only (families the model trained on),12,airfoil_0462,rae2822,test,14,0.04878160357475281,-4.0,0.06542112678289413
+val + test airfoils only (families the model trained on),13,airfoil_0026,naca0006,val,9,0.04588902369141579,3.0,0.05519629642367363
+val + test airfoils only (families the model trained on),14,airfoil_0360,goe387,val,12,0.045469317585229874,-2.0,0.061525266617536545
+val + test airfoils only (families the model trained on),15,airfoil_0343,goe387,val,14,0.04335271939635277,-4.0,0.08573519438505173
+val + test airfoils only (families the model trained on),16,airfoil_0335,s1223,val,15,0.04096701368689537,-4.0,0.05823773518204689
+val + test airfoils only (families the model trained on),17,airfoil_0227,naca23012,val,15,0.040196992456912994,-3.0,0.06214768812060356
+val + test airfoils only (families the model trained on),18,airfoil_0122,naca2412,val,14,0.039143938571214676,2.0,0.06418508291244507
+val + test airfoils only (families the model trained on),19,airfoil_0233,naca23012,val,15,0.03831953555345535,-4.0,0.06303415447473526
+val + test airfoils only (families the model trained on),20,airfoil_0076,naca0018,test,14,0.038235247135162354,8.0,0.04675860330462456

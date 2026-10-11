@@ -90,14 +90,25 @@ def main() -> int:
         return chosen
 
     views = {"all airfoils": rows,
-             "held-out airfoils only (val, test, unseen family)": [r for r in rows if r["split"] != "train"]}
+             "held-out airfoils (val, test, unseen family)": [r for r in rows if r["split"] != "train"],
+             "val + test airfoils only (families the model trained on)":
+                 [r for r in rows if r["split"] in ("val", "test")]}
     out_rows = []
     md = ["# DRAFT active selection (not sent to ANSYS)", "",
           f"Top {args.n} airfoils by mean relative Cp error of the Stage 1 model, at most "
           f"{args.max_per_family} per baseline family, airfoils with at least {args.min_cases} "
           "converged angles. `worst_alpha` is the suggested ANSYS angle (largest error).", "",
-          "Caveats: train-split errors are optimistic. A large error at high alpha on a thin "
-          "airfoil may be XFOIL near stall rather than a model failure; check before running ANSYS.", ""]
+          "Caveats:",
+          "- Train-split errors are optimistic (the model has fitted those airfoils).",
+          "- The top ranks are airfoils from the two families held out of training "
+          "(`e387`, `naca6409`). They rank high BY CONSTRUCTION: the model never saw them. "
+          "A real selection should first retrain Stage 1 on all families. The third view "
+          "(val + test airfoils from families the model DID train on) is the fairer "
+          "picture of ordinary generalisation error.",
+          "- A large error at high alpha on a thin airfoil may be XFOIL near stall rather "
+          "than a model failure; check before spending ANSYS time.",
+          "- Check that each suggested angle is a sensible ANSYS operating point before "
+          "using it.", ""]
     for name, pool in views.items():
         chosen = pick(pool)
         md += [f"## {name}", "", "| rank | airfoil | baseline | split | mean Cp rel. L2 | worst alpha | worst-case rel. L2 |",
