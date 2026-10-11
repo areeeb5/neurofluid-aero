@@ -1,0 +1,8 @@
+airfoils: 500   grid 64x64   domain x[-0.25, 1.25] y[-0.75, 0.75]
+mask cells per airfoil: min 67  median 146  max 241
+airfoils with an empty mask: 0
+max cells across the wing thickness: min 2  median 5  max 8
+airfoils with a thickest column of <= 2 cells: 34
+XFOIL surface nodes checked: 499 airfoils x 200 nodes
+|SDF| at surface nodes (cells): mean 0.043  p99 0.472  max 0.517
+airfoils whose worst node is > 0.75 cell off the surface: 0

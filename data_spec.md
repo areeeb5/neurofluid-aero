@@ -351,11 +351,80 @@ and therefore has **no `.npz` file**. Its 15 failures are still recorded
 explicitly in `status.csv`; consumers must not assume every `airfoil_id`
 in the index has a corresponding Cp archive.
 
-## Phase 1, later steps (ANSYS, grid encoding)
-The ANSYS + grid encoding steps are not yet defined here — to be added
-when implemented.
+## Phase 1, grid encoding — the 64x64 grid (THE shared grid definition)
 Per `CLAUDE.md`, all three data tiers (XFOIL / SU2 / ANSYS) must land on
-the SAME 64x64 grid definition (SDF, inside/outside mask, x, y, angle of
-attack, Reynolds number channels) and the same non-dimensionalization;
-that grid spec belongs in this file once it exists, not redefined ad hoc
-in any one script.
+the SAME grid and the same non-dimensionalization. This section is that
+definition; the code constants in
+[`data_generation/grid_encoding.py`](data_generation/grid_encoding.py) must
+match it. **ANSYS fields must be exported on exactly this grid.**
+
+Chosen 2026-10-11 (Areeb, "Tight" option). Decided and implemented in the
+overnight run; the ANSYS Meshing session has NOT yet been told.
+
+### Domain and indexing
+| item | value |
+|---|---|
+| frame | airfoil-fixed, chord units (c = 1, LE at origin, TE at x = 1) |
+| x range | **−0.25 to 1.25** |
+| y range | **−0.75 to 0.75** |
+| resolution | 64 × 64 cells |
+| cell size | 0.0234375 c in x and y (square cells), about 43 cells per chord |
+| sampling points | **cell centres**: `x_i = −0.25 + (i + 0.5)·dx`, same for y |
+| array layout | `[iy, ix]`, `iy` increases with y (y up), `ix` increases with x |
+
+Cell-centre sampling means torch `grid_sample(..., align_corners=False)` maps
+physical (x, y) to [−1, 1] by `u = (x + 0.25)/1.5·2 − 1`,
+`v = (y + 0.75)/1.5·2 − 1` (`grid_encoding.xy_to_norm`).
+
+### Channels (model input, order fixed)
+| # | name | definition |
+|---|---|---|
+| 0 | `sdf` | signed distance to the airfoil outline, chord units, **negative inside, positive outside** |
+| 1 | `mask` | 1 inside the airfoil, 0 outside; exactly `(sdf < 0)` |
+| 2 | `x` | physical x of the cell centre (chord units) |
+| 3 | `y` | physical y of the cell centre (chord units) |
+| 4 | `alpha` | angle of attack in degrees **÷ 10**, constant over the grid |
+| 5 | `re` | **log10(Re) ÷ 6**, constant over the grid (Re = 1e6 gives 1.0) |
+
+Channels 0–3 depend only on the airfoil, so they are stored once per airfoil.
+Channels 4–5 are scalars added at load time
+(`grid_encoding.assemble_input`). Angle of attack is never baked into the
+geometry.
+
+### `data_generation/grids/airfoil_grids.npz` (gitignored, regenerated in ~30 s)
+| key | shape | meaning |
+|---|---|---|
+| `airfoil_id` | (500,) | same order as `airfoil_index.csv` |
+| `sdf` | (500, 64, 64) float32 | channel 0 |
+| `mask` | (500, 64, 64) uint8 | channel 1 |
+| `x`, `y` | (64, 64) float32 | channels 2, 3 (identical for every airfoil) |
+| `domain` | (4,) | `[x_min, x_max, y_min, y_max]` |
+
+Rebuild: `python data_generation/grid_encoding.py`. The SDF is computed
+from the `.dat` outline (exact distance to the closed polygon, including the
+trailing-edge gap), not from the 200 XFOIL panel nodes.
+
+### Validation (`data_generation/test_grid_encoding.py`, all pass)
+Known-good: exact circle SDF matches `r − R` to 2.5e-7; symmetric airfoil
+gives an exactly symmetric SDF and mask; SDF is 0 on the outline; mask area
+within 3% of the true polygon area (0.14%, 0.71%, 2.43% on three airfoils);
+`|∇SDF| = 1` away from the surface (99th percentile deviation 0.010).
+Known-bad: self-intersecting, 2-point, zero-area and NaN outlines are all
+rejected.
+
+Over all 500 airfoils (`check_grids.py`, `grids/grid_stats.txt`): no empty
+masks; the 200 XFOIL surface nodes lie within **0.52 of a cell** of the SDF
+zero level set (mean 0.043 cell), so Head A can sample the latent field at
+those nodes.
+
+### Known limitation: thin sections are coarse in the mask
+At 43 cells per chord a thin wing is only a few cells thick: the thickest
+column holds a median of 5 mask cells (range 2 to 8), and **34 airfoils (the
+6%-thick NACA 0006 family) have a thickest column of only 2 cells**. For
+those the mask is coarse and stops short of the thin trailing edge; the SDF
+channel still carries the sub-cell geometry, and Head A samples the SDF-aligned
+latent field. Expect thin-section accuracy to be the weak spot. See
+`grids/grid_check.png`.
+
+## Phase 1, later steps (ANSYS)
+The ANSYS tier is not yet defined here. Its export must use the grid above.

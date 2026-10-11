@@ -10,3 +10,7 @@ tools/
 # Per-airfoil Cp archives (~10 MB binary, regenerable in ~9 min from code).
 # status.csv and polars.csv are committed instead.
 data_generation/xfoil_data/cp/
+
+# Regenerable artifacts (seconds to minutes from committed code)
+data_generation/grids/*.npz
+overnight/checkpoints/
